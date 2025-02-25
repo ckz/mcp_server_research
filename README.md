@@ -55,13 +55,13 @@ cd src/demo
 DEBUG=true PORT=5001 python simple_mcp_server.py
 ```
 
-Then visit http://localhost:5000 (or the custom port you specified) to view the dashboard.
+Then visit http://localhost:5001 (or the custom port you specified) to view the dashboard.
 
 To run a client demo in a separate terminal:
 
 ```bash
 cd src/demo
-python client_demo.py --server http://localhost:5000 --duration 30 --interval 2
+python client_demo.py --server http://localhost:5001 --duration 30 --interval 2
 ```
 
 You should see the server accepting connections and the client successfully sending messages.
