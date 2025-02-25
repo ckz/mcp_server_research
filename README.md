@@ -41,12 +41,30 @@ pip install -r requirements.txt
 
 ### Running the Demo
 
+To run the MCP server with default settings:
+
 ```bash
 cd src/demo
 python simple_mcp_server.py
 ```
 
-Then visit http://localhost:5000 to view the dashboard.
+To run with custom settings using environment variables:
+
+```bash
+cd src/demo
+DEBUG=true PORT=5001 python simple_mcp_server.py
+```
+
+Then visit http://localhost:5000 (or the custom port you specified) to view the dashboard.
+
+To run a client demo in a separate terminal:
+
+```bash
+cd src/demo
+python client_demo.py --server http://localhost:5000 --duration 30 --interval 2
+```
+
+You should see the server accepting connections and the client successfully sending messages.
 
 ## Demo Features
 
@@ -65,3 +83,14 @@ MIT
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Changelog
+
+### 2024-02-24
+- Added proper error handling to the client code for connection failures
+- Using sessions in the client for better connection management
+- Added CORS support to the server for cross-origin requests
+- Implemented timeouts for API calls to prevent hanging
+- Made debug mode configurable through environment variables
+- Fixed dependency issues by adding flask-cors and specifying werkzeug version
+- Improved documentation in code comments
