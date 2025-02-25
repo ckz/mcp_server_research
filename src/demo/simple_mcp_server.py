@@ -9,6 +9,7 @@ import os
 import uuid
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template_string
+from flask_cors import CORS
 
 # Configure logging
 logging.basicConfig(
@@ -19,6 +20,8 @@ logger = logging.getLogger('mcp-server')
 
 # Initialize Flask app
 app = Flask(__name__)
+# Enable CORS for all routes
+CORS(app)
 
 # In-memory storage for messages and clients
 messages = []
@@ -198,4 +201,6 @@ def get_messages():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    # Use debug mode only in development
+    debug_mode = os.environ.get('DEBUG', 'False').lower() == 'true'
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)

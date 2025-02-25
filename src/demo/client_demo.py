@@ -19,7 +19,7 @@ logging.basicConfig(
 logger = logging.getLogger('mcp-client')
 
 class MCPClient:
-    """Simple MCP Protocol Client implementation"""
+    """Simple MCP Protocol Client implementation with connection management and error handling"""
     
     def __init__(self, server_url, client_id=None, capabilities=None):
         """Initialize the MCP client"""
@@ -27,6 +27,7 @@ class MCPClient:
         self.client_id = client_id or str(uuid.uuid4())
         self.capabilities = capabilities or ["messaging", "heartbeat"]
         self.registered = False
+        self.session = requests.Session()  # Use a session for connection pooling and efficiency
         logger.info(f"Initializing MCP Client with ID: {self.client_id}")
     
     def register(self):
@@ -38,7 +39,7 @@ class MCPClient:
         }
         
         try:
-            response = requests.post(endpoint, json=data)
+            response = self.session.post(endpoint, json=data, timeout=10)
             if response.status_code == 200:
                 self.registered = True
                 logger.info(f"Client registered successfully: {response.json()}")
@@ -46,6 +47,9 @@ class MCPClient:
             else:
                 logger.error(f"Failed to register client: {response.text}")
                 return False
+        except requests.exceptions.Timeout:
+            logger.error(f"Timeout while registering client")
+            return False
         except Exception as e:
             logger.error(f"Error registering client: {e}")
             return False
@@ -70,7 +74,7 @@ class MCPClient:
             data["content"] = content
         
         try:
-            response = requests.post(endpoint, json=data)
+            response = self.session.post(endpoint, json=data, timeout=10)
             if response.status_code == 200:
                 logger.info(f"Message sent successfully: {message_type}")
                 logger.debug(f"Response: {response.json()}")
@@ -78,6 +82,9 @@ class MCPClient:
             else:
                 logger.error(f"Failed to send message: {response.text}")
                 return False
+        except requests.exceptions.Timeout:
+            logger.error(f"Timeout while sending message {message_type}")
+            return False  
         except Exception as e:
             logger.error(f"Error sending message: {e}")
             return False
@@ -104,7 +111,7 @@ class MCPClient:
         return self.send_message("command", content, recipient)
 
 def run_demo(server_url, duration=60, interval=5):
-    """Run a demonstration of the MCP client"""
+    """Run a demonstration of the MCP client with robust error handling"""
     client = MCPClient(server_url)
     
     # Register the client
@@ -126,30 +133,37 @@ def run_demo(server_url, duration=60, interval=5):
     counter = 0
     
     while time.time() - start_time < duration:
-        # Send a heartbeat every interval
-        client.send_heartbeat()
-        
-        # Every 3 intervals, send some sample data
-        if counter % 3 == 0:
-            client.send_data({
-                "sensor_readings": {
-                    "temperature": 22 + (counter % 10),
-                    "humidity": 45 + (counter % 20),
-                    "pressure": 1013 + (counter % 30)
-                },
-                "timestamp": datetime.now().isoformat()
-            })
-        
-        # Every 5 intervals, send a command
-        if counter % 5 == 0:
-            client.send_command("check_status", {
-                "verbose": True,
-                "include_metrics": True
-            })
-        
-        # Increment counter and sleep
-        counter += 1
-        time.sleep(interval)
+        try:
+            # Send a heartbeat every interval
+            client.send_heartbeat()
+            
+            # Every 3 intervals, send some sample data
+            if counter % 3 == 0:
+                client.send_data({
+                    "sensor_readings": {
+                        "temperature": 22 + (counter % 10),
+                        "humidity": 45 + (counter % 20),
+                        "pressure": 1013 + (counter % 30)
+                    },
+                    "timestamp": datetime.now().isoformat()
+                })
+            
+            # Every 5 intervals, send a command
+            if counter % 5 == 0:
+                client.send_command("check_status", {
+                    "verbose": True,
+                    "include_metrics": True
+                })
+            
+            # Increment counter and sleep
+            counter += 1
+            time.sleep(interval)
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"Connection error: {e}. Retrying in {interval} seconds...")
+            time.sleep(interval)
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}. Continuing...")
+            time.sleep(interval)
     
     # Send final message before exiting
     client.send_data({
